@@ -16,6 +16,9 @@ unsigned char index=0;
 float T;
 bit SendUARTFlag = 0;      // 1秒到时的发送标志
 char UART_Str[30];         // 足够容纳 "99:59:59 --> 99.99\r\n"
+bit UART_Busy = 0;  // 串口忙碌标志位
+
+
 void main()
 {
 	
@@ -26,8 +29,6 @@ void main()
 	
 	while(1)
 	{
-
-		tmp=(int)(T*100);
 		KeyNum=Key();
 
 		if(KeyNum==1)			//K1按键按下用于启动或暂停计时过程
@@ -41,7 +42,7 @@ void main()
 			Min=1;				
 			Sec=1;
 			Buzz=0;					//暂停蜂鸣器
-						
+			tmp=(int)(T*100);			
 			AT24C02_WriteByte(0,tmp/100);//温度计整数部分
 			AT24C02_WriteByte(1,tmp%100);
 
@@ -79,13 +80,12 @@ void main()
       DS18B20_ConvertT(); // 转换温度
       T = DS18B20_ReadT(); // 读取温度
       EA = 1; // 恢复中断
-            
+      tmp=(int)(T*100);     
       SendUARTFlag = 0;  // 清标志
 			sprintf(UART_Str, "%02d:%02d:%02d --> %d.%02dC\r\n",Hour, Min, Sec, tmp / 100, tmp % 100);
-			ET0 = 0; // 临时关闭定时器0中断，停止按键扫描
-			// ... 发送数据 ...
-			UART_SendString(UART_Str);
-			ET0 = 1; // 发送完毕，恢复中断
+			UART_Busy = 1;          // 告诉中断：我现在占用 P3.1 发送数据，别读按键
+      UART_SendString(UART_Str);
+      UART_Busy = 0;
 		}
 	}
 }
@@ -127,10 +127,13 @@ void Timer0_Routine() interrupt 1
 	if(T0Count1>=20)
 	{
 		T0Count1=0;
-		Key_Loop();	//20ms调用一次按键驱动函数
+		if(UART_Busy == 0) 
+    {
+        Key_Loop(); 
+    }
 	}
 
-	Nixie_Loop();//2ms调用一次数码管驱动函数
+	Nixie_Loop();//1ms调用一次数码管驱动函数
 	
 	T0Count3++;
 	if(T0Count3>=1000)
@@ -145,8 +148,29 @@ void Timer0_Routine() interrupt 1
 }
 void UART_Routine() interrupt 4
 {
-	if(RI==1)					//如果接收标志位为1，接收到了数据
-	{
-		RI=0;					//接收标志位清0
-	}
+	unsigned char cmd;
+    
+    if(RI == 1) // 如果接收标志位为1，接收到了数据
+    {
+        cmd = SBUF; // 读取串口接收到的数据
+        RI = 0;     // 接收标志位清0
+        
+        // --- 协议处理逻辑 ---
+        UART_SendString("CMD: RECEIVED");
+			UART_SendByte(cmd);
+        // 指令: 'S' (0x53) -> Disable/Stop Timer
+        if(cmd == 'S' || cmd == 0x53)
+        {
+            RunFlag = 0; // 禁用/停止计时
+            // 可选: 发送反馈信息给PC
+            UART_SendString("CMD: Timer Stopped\r\n");
+        }
+        
+        // 指令: 'R' (0x52) -> Enable/Start Timer (可选)
+        else if(cmd == 'R' || cmd == 0x52)
+        {
+            RunFlag = 1; // 启用/开始计时
+            UART_SendString("CMD: Timer Started\r\n");
+        }
+    }
 }

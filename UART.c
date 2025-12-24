@@ -15,6 +15,7 @@ void UART_Init()
     TH1 = 0xFD;
     ET1 = 0;
     TR1 = 1;
+	  ES = 1;
 }
 
 /**
