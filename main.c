@@ -8,7 +8,7 @@
 #include "DS18B20.h"
 #include "UART.h"
 #include <stdio.h>
-
+//波特率为19200
 unsigned char KeyNum;
 int Hour=0,Min=0,Sec=1,tmp;
 unsigned char RunFlag,Buzz=0;
@@ -77,8 +77,8 @@ void main()
 			DS18B20_ConvertT();	//转换温度
 		  T=DS18B20_ReadT();	//读取温度
 			SendUARTFlag = 0;  // 清标志
-			sprintf(UART_Str, "%02d:%02d:%02d --> %d.%02d℃\r\n",Hour, Min,tmp / 100, tmp % 100);
-			UART_SendString("Hello");
+			sprintf(UART_Str, "%02d:%02d:%02d --> %d.%02d℃\r\n",Hour, Min, Sec, tmp / 100, tmp % 100);
+			UART_SendString(UART_Str);
 		}
 	}
 }
@@ -90,7 +90,7 @@ void main()
   */
 void Sec_Loop(void)
 {
-	if(RunFlag)
+	if(RunFlag==1)
 	{
 		Sec--;
 		if(Sec<0)

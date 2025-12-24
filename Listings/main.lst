@@ -1,4 +1,4 @@
-C51 COMPILER V9.57.0.0   MAIN                                                              12/24/2025 12:31:45 PAGE 1   
+C51 COMPILER V9.57.0.0   MAIN                                                              12/24/2025 12:54:34 PAGE 1   
 
 
 C51 COMPILER V9.57.0.0, COMPILATION OF MODULE MAIN
@@ -18,7 +18,7 @@ line level    source
    8          #include "DS18B20.h"
    9          #include "UART.h"
   10          #include <stdio.h>
-  11          
+  11          //波特率为19200
   12          unsigned char KeyNum;
   13          int Hour=0,Min=0,Sec=1,tmp;
   14          unsigned char RunFlag,Buzz=0;
@@ -62,7 +62,7 @@ line level    source
   52   3      
   53   3          }
   54   2          if(KeyNum==4&&!RunFlag)     //K4按键按下用于对当前计时时间进行逐次增加，最小步长�
-C51 COMPILER V9.57.0.0   MAIN                                                              12/24/2025 12:31:45 PAGE 2   
+C51 COMPILER V9.57.0.0   MAIN                                                              12/24/2025 12:54:34 PAGE 2   
 
              -�1
   55   2          {
@@ -90,8 +90,8 @@ line level    source
   77   3            DS18B20_ConvertT(); //转换温度
   78   3            T=DS18B20_ReadT();  //读取温度
   79   3            SendUARTFlag = 0;  // 清标志
-  80   3            sprintf(UART_Str, "%02d:%02d:%02d --> %d.%02d℃\r\n",Hour, Min,tmp / 100, tmp % 100);
-  81   3            UART_SendString("Hello");
+  80   3            sprintf(UART_Str, "%02d:%02d:%02d --> %d.%02d℃\r\n",Hour, Min, Sec, tmp / 100, tmp % 100);
+  81   3            UART_SendString(UART_Str);
   82   3          }
   83   2        }
   84   1      }
@@ -103,7 +103,7 @@ line level    source
   90            */
   91          void Sec_Loop(void)
   92          {
-  93   1        if(RunFlag)
+  93   1        if(RunFlag==1)
   94   1        {
   95   2          Sec--;
   96   2          if(Sec<0)
@@ -126,7 +126,7 @@ line level    source
  113          
  114          void Timer0_Routine() interrupt 1
  115          {
-C51 COMPILER V9.57.0.0   MAIN                                                              12/24/2025 12:31:45 PAGE 3   
+C51 COMPILER V9.57.0.0   MAIN                                                              12/24/2025 12:54:34 PAGE 3   
 
  116   1        static unsigned int T0Count1,T0Count2,T0Count3;
  117   1        TL0 = 0x18;   //设置定时初值
@@ -166,8 +166,8 @@ line level    source
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =    765    ----
-   CONSTANT SIZE    =     38    ----
+   CODE SIZE        =    773    ----
+   CONSTANT SIZE    =     32    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----
    DATA SIZE        =     52    ----
