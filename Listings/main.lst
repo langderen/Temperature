@@ -1,0 +1,179 @@
+C51 COMPILER V9.57.0.0   MAIN                                                              12/24/2025 12:31:45 PAGE 1   
+
+
+C51 COMPILER V9.57.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: E:\UV4\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\main.lst
+                    -) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          #include "Timer0.h"
+   3          #include "Key.h"
+   4          #include "Nixie.h"
+   5          #include "Delay.h"
+   6          #include "AT24C02.h"
+   7          #include "Buzzer.h"
+   8          #include "DS18B20.h"
+   9          #include "UART.h"
+  10          #include <stdio.h>
+  11          
+  12          unsigned char KeyNum;
+  13          int Hour=0,Min=0,Sec=1,tmp;
+  14          unsigned char RunFlag,Buzz=0;
+  15          unsigned char index=0;
+  16          float T;
+  17          bit SendUARTFlag = 0;      // 1秒到时的发送标志
+  18          char UART_Str[30];         // 足够容纳 "99:59:59 --> 99.99\r\n"
+  19          void main()
+  20          {
+  21   1        
+  22   1        Timer0_Init();
+  23   1        UART_Init();
+  24   1        DS18B20_ConvertT();   //上电先转换一次温度，防止第一次读数据错误
+  25   1        Delay(1000);      //等待转换完成
+  26   1        
+  27   1        while(1)
+  28   1        {
+  29   2      
+  30   2          tmp=(int)(T*100);
+  31   2          KeyNum=Key();
+  32   2      
+  33   2          if(KeyNum==1)     //K1按键按下用于启动或暂停计时过程
+  34   2          {
+  35   3            RunFlag=!RunFlag; //启动标志位翻转
+  36   3          }
+  37   2          if(KeyNum==2)     //K2按键按下用于计时清零及系统复位
+  38   2          { 
+  39   3            RunFlag=0;
+  40   3            Hour=0;         //分秒清0
+  41   3            Min=0;        
+  42   3            Sec=1;
+  43   3            Buzz=0;         //暂停蜂鸣器
+  44   3                  
+  45   3            AT24C02_WriteByte(0,tmp/100);//温度计整数部分
+  46   3            AT24C02_WriteByte(1,tmp%100);
+  47   3      
+  48   3          }
+  49   2          if(KeyNum==3)     //K3按键按下用于切换计时档位
+  50   2          {
+  51   3            if(++index>2)index=0;
+  52   3      
+  53   3          }
+  54   2          if(KeyNum==4&&!RunFlag)     //K4按键按下用于对当前计时时间进行逐次增加，最小步长�
+C51 COMPILER V9.57.0.0   MAIN                                                              12/24/2025 12:31:45 PAGE 2   
+
+             -�1
+  55   2          {
+  56   3            if(index==0)Sec++;
+  57   3            else if(index==1)Min++;
+  58   3            else Hour++;
+  59   3            
+  60   3            if(Sec >= 60) Sec = 0;
+  61   3            if(Min >= 60) Min = 0;
+  62   3            if(Hour >= 99) Hour = 0;
+  63   3          }
+  64   2          Nixie_SetBuf(1,Hour/10);  //设置显示缓存，显示数据
+  65   2          Nixie_SetBuf(2,Hour%10);
+  66   2          Nixie_SetBuf(3,11);
+  67   2          Nixie_SetBuf(4,Min/10);
+  68   2          Nixie_SetBuf(5,Min%10);
+  69   2          Nixie_SetBuf(6,11);
+  70   2          Nixie_SetBuf(7,Sec/10);
+  71   2          Nixie_SetBuf(8,Sec%10);
+  72   2          
+  73   2          
+  74   2          // 每1秒发送一次 UART 数据
+  75   2          
+  76   2          if(SendUARTFlag) {    
+  77   3            DS18B20_ConvertT(); //转换温度
+  78   3            T=DS18B20_ReadT();  //读取温度
+  79   3            SendUARTFlag = 0;  // 清标志
+  80   3            sprintf(UART_Str, "%02d:%02d:%02d --> %d.%02d℃\r\n",Hour, Min,tmp / 100, tmp % 100);
+  81   3            UART_SendString("Hello");
+  82   3          }
+  83   2        }
+  84   1      }
+  85          
+  86          /**
+  87            * @brief  秒表驱动函数，在中断中调用
+  88            * @param  无
+  89            * @retval 无
+  90            */
+  91          void Sec_Loop(void)
+  92          {
+  93   1        if(RunFlag)
+  94   1        {
+  95   2          Sec--;
+  96   2          if(Sec<0)
+  97   2          {
+  98   3            Sec=59;
+  99   3            Min--;
+ 100   3            if(Min<0)
+ 101   3            {
+ 102   4              Min=59;
+ 103   4              Hour--;
+ 104   4              if(Hour<0)
+ 105   4              { Hour=Min=Sec=0;
+ 106   5                RunFlag=0;
+ 107   5                Buzz=1;
+ 108   5              }
+ 109   4            }
+ 110   3          }
+ 111   2        }
+ 112   1      }
+ 113          
+ 114          void Timer0_Routine() interrupt 1
+ 115          {
+C51 COMPILER V9.57.0.0   MAIN                                                              12/24/2025 12:31:45 PAGE 3   
+
+ 116   1        static unsigned int T0Count1,T0Count2,T0Count3;
+ 117   1        TL0 = 0x18;   //设置定时初值
+ 118   1        TH0 = 0xFC;   //设置定时初值
+ 119   1        T0Count1++;
+ 120   1        if(T0Count1>=20)
+ 121   1        {
+ 122   2          T0Count1=0;
+ 123   2          Key_Loop(); //20ms调用一次按键驱动函数
+ 124   2        }
+ 125   1        T0Count2++;
+ 126   1        if(T0Count2>=2)
+ 127   1        {
+ 128   2          T0Count2=0;
+ 129   2          Nixie_Loop();//2ms调用一次数码管驱动函数
+ 130   2        }
+ 131   1        T0Count3++;
+ 132   1        if(T0Count3>=1000)
+ 133   1        {
+ 134   2          T0Count3=0;
+ 135   2          Sec_Loop(); //1s调用一次数秒表驱动函数
+ 136   2          SendUARTFlag=1;
+ 137   2        }
+ 138   1      
+ 139   1        if(Buzz)Buzzer_Time();
+ 140   1            
+ 141   1      }
+ 142          void UART_Routine() interrupt 4
+ 143          {
+ 144   1        if(RI==1)         //如果接收标志位为1，接收到了数据
+ 145   1        {
+ 146   2          P2=~SBUF;       //读取数据，取反后输出到LED
+ 147   2          UART_SendByte(SBUF);  //将受到的数据发回串口
+ 148   2          RI=0;         //接收标志位清0
+ 149   2        }
+ 150   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    765    ----
+   CONSTANT SIZE    =     38    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     52    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
