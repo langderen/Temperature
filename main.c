@@ -156,8 +156,6 @@ void UART_Routine() interrupt 4
         RI = 0;     // 接收标志位清0
         
         // --- 协议处理逻辑 ---
-        UART_SendString("CMD: RECEIVED");
-			UART_SendByte(cmd);
         // 指令: 'S' (0x53) -> Disable/Stop Timer
         if(cmd == 'S' || cmd == 0x53)
         {
