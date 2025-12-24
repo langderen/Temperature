@@ -1,4 +1,4 @@
-C51 COMPILER V9.57.0.0   BUZZER                                                            12/24/2025 12:54:34 PAGE 1   
+C51 COMPILER V9.57.0.0   BUZZER                                                            12/24/2025 13:18:23 PAGE 1   
 
 
 C51 COMPILER V9.57.0.0, COMPILATION OF MODULE BUZZER
@@ -36,12 +36,11 @@ line level    source
   26          void Buzzer_Time()
   27          {
   28   1          Buzzer=!Buzzer;
-  29   1          Buzzer_Delay500us();
-  30   1      }
+  29   1      }
 
 
 MODULE INFORMATION:   STATIC OVERLAYABLE
-   CODE SIZE        =     11    ----
+   CODE SIZE        =      9    ----
    CONSTANT SIZE    =   ----    ----
    XDATA SIZE       =   ----    ----
    PDATA SIZE       =   ----    ----

@@ -8,9 +8,9 @@
 #include "DS18B20.h"
 #include "UART.h"
 #include <stdio.h>
-//波特率为19200
+//波特率为9600
 unsigned char KeyNum;
-int Hour=0,Min=0,Sec=1,tmp;
+int Hour=0,Min=1,Sec=1,tmp;
 unsigned char RunFlag,Buzz=0;
 unsigned char index=0;
 float T;
@@ -38,7 +38,7 @@ void main()
 		{	
 			RunFlag=0;
 			Hour=0;					//分秒清0
-			Min=0;				
+			Min=1;				
 			Sec=1;
 			Buzz=0;					//暂停蜂鸣器
 						
@@ -74,11 +74,18 @@ void main()
 		// 每1秒发送一次 UART 数据
 		
 		if(SendUARTFlag) {		
-			DS18B20_ConvertT();	//转换温度
-		  T=DS18B20_ReadT();	//读取温度
-			SendUARTFlag = 0;  // 清标志
-			sprintf(UART_Str, "%02d:%02d:%02d --> %d.%02d℃\r\n",Hour, Min, Sec, tmp / 100, tmp % 100);
+			// 关中断保护 DS18B20 时序
+      EA = 0; 
+      DS18B20_ConvertT(); // 转换温度
+      T = DS18B20_ReadT(); // 读取温度
+      EA = 1; // 恢复中断
+            
+      SendUARTFlag = 0;  // 清标志
+			sprintf(UART_Str, "%02d:%02d:%02d --> %d.%02dC\r\n",Hour, Min, Sec, tmp / 100, tmp % 100);
+			ET0 = 0; // 临时关闭定时器0中断，停止按键扫描
+			// ... 发送数据 ...
 			UART_SendString(UART_Str);
+			ET0 = 1; // 发送完毕，恢复中断
 		}
 	}
 }
@@ -113,21 +120,18 @@ void Sec_Loop(void)
 
 void Timer0_Routine() interrupt 1
 {
-	static unsigned int T0Count1,T0Count2,T0Count3;
-	TL0 = 0x18;		//设置定时初值
-	TH0 = 0xFC;		//设置定时初值
+	static unsigned int T0Count1,T0Count3;
+	TL0 = 0x66;     
+  TH0 = 0xFC;
 	T0Count1++;
 	if(T0Count1>=20)
 	{
 		T0Count1=0;
 		Key_Loop();	//20ms调用一次按键驱动函数
 	}
-	T0Count2++;
-	if(T0Count2>=2)
-	{
-		T0Count2=0;
-		Nixie_Loop();//2ms调用一次数码管驱动函数
-	}
+
+	Nixie_Loop();//2ms调用一次数码管驱动函数
+	
 	T0Count3++;
 	if(T0Count3>=1000)
 	{
@@ -143,8 +147,6 @@ void UART_Routine() interrupt 4
 {
 	if(RI==1)					//如果接收标志位为1，接收到了数据
 	{
-		P2=~SBUF;				//读取数据，取反后输出到LED
-		UART_SendByte(SBUF);	//将受到的数据发回串口
 		RI=0;					//接收标志位清0
 	}
 }

@@ -1,4 +1,4 @@
-C51 COMPILER V9.57.0.0   UART                                                              12/24/2025 12:54:35 PAGE 1   
+C51 COMPILER V9.57.0.0   UART                                                              12/24/2025 13:18:23 PAGE 1   
 
 
 C51 COMPILER V9.57.0.0, COMPILATION OF MODULE UART
@@ -16,15 +16,15 @@ line level    source
    6            * @retval 无
    7            */
    8          void UART_Init()
-   9          { SCON = 0x50;
-  10   1        PCON |= 0x80;
-  11   1        TMOD &= 0x0F;     //设置定时器模式
-  12   1        TMOD |= 0x20;   //设置定时器模式
-  13   1        TL1 = 0xFD;   //设定定时初值
-  14   1        TH1 = 0xFD;   //设定定时器重装值
-  15   1        ET1 = 0;    //禁止定时器1中断
-  16   1        TR1 = 1;    //启动定时器1
-  17   1           
+   9          {   
+  10   1          SCON = 0x50;
+  11   1          PCON &= 0x7F;   // 【重要修改】波特率不加倍 (SMOD=0)
+  12   1          TMOD &= 0x0F;
+  13   1          TMOD |= 0x20;
+  14   1          TL1 = 0xFD;     // 11.0592MHz下，0xFD对应9600bps
+  15   1          TH1 = 0xFD;
+  16   1          ET1 = 0;
+  17   1          TR1 = 1;
   18   1      }
   19          
   20          /**

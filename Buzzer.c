@@ -26,5 +26,4 @@ void Buzzer_Delay500us()		//@12.000MHz
 void Buzzer_Time()
 {
 		Buzzer=!Buzzer;
-		Buzzer_Delay500us();
 }
